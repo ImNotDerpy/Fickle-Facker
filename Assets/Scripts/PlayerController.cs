@@ -8,8 +8,12 @@ using Hashtable = ExitGames.Client.Photon.Hashtable;
 
 public class PlayerController : MonoBehaviourPunCallbacks, IDamageable
 {
+	[SerializeField] Image staminabarImage;
 	[SerializeField] Image healthbarImage;
 	[SerializeField] GameObject ui;
+
+
+
 
 	[SerializeField] GameObject cameraHolder;
 
@@ -31,6 +35,9 @@ public class PlayerController : MonoBehaviourPunCallbacks, IDamageable
 
 	const float maxHealth = 100f;
 	float currentHealth = maxHealth;
+
+	const float maxStamina = 100f;
+	float currentStamina = maxStamina;
 
 	PlayerManager playerManager;
 
@@ -122,7 +129,7 @@ public class PlayerController : MonoBehaviourPunCallbacks, IDamageable
 	{
 		Vector3 moveDir = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical")).normalized;
 
-		moveAmount = Vector3.SmoothDamp(moveAmount, moveDir * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeed : walkSpeed), ref smoothMoveVelocity, smoothTime);
+        moveAmount = Vector3.SmoothDamp(moveAmount, moveDir * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeed : walkSpeed), ref smoothMoveVelocity, smoothTime);
 	}
 
 	void Jump()
@@ -130,8 +137,9 @@ public class PlayerController : MonoBehaviourPunCallbacks, IDamageable
 		if(Input.GetKeyDown(KeyCode.Space) && grounded)
 		{
 			rb.AddForce(transform.up * jumpForce);
+			TakeStamina(10f);
 		}
-	}
+    }
 
 	void EquipItem(int _index)
 	{
@@ -194,6 +202,25 @@ public class PlayerController : MonoBehaviourPunCallbacks, IDamageable
 		{
 			Die();
 			PlayerManager.Find(info.Sender).GetKill();
+		}
+	}
+
+	public void TakeStamina(float stamina)
+	{
+		PV.RPC(nameof(RPC_TakeStamina), PV.Owner, stamina);
+	}
+
+	[PunRPC]
+	void RPC_TakeStamina(float stamina, PhotonMessageInfo info)
+	{
+		currentStamina -= stamina;
+
+		staminabarImage.fillAmount = currentStamina / maxStamina;
+
+		if (currentStamina <= 0)
+		{
+			sprintSpeed = 0;
+			jumpForce = 0;
 		}
 	}
 
