@@ -13,7 +13,7 @@ public class PlayerController : MonoBehaviourPunCallbacks, IDamageable
 
 	[SerializeField] GameObject cameraHolder;
 
-	[SerializeField] float mouseSensitivity, sprintSpeed, walkSpeed, jumpForce, smoothTime;
+	[SerializeField] float mouseSensitivity, sprintSpeed, walkSpeed, jumpForce, smoothTime, rollSpeed;
 
 	[SerializeField] Item[] items;
 
@@ -21,6 +21,8 @@ public class PlayerController : MonoBehaviourPunCallbacks, IDamageable
 	int previousItemIndex = -1;
 
 	float verticalLookRotation;
+	float rollCooldown = 0f;
+
 	bool grounded;
 	Vector3 smoothMoveVelocity;
 	Vector3 moveAmount;
@@ -122,6 +124,14 @@ public class PlayerController : MonoBehaviourPunCallbacks, IDamageable
 	{
 		Vector3 moveDir = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical")).normalized;
 
+		rollCooldown -= Time.deltaTime;
+
+		if (rollCooldown <= 0 && Input.GetKeyDown(KeyCode.LeftControl))
+		{
+			moveDir *= rollSpeed;
+			rollCooldown = 1f;
+		}
+
 		moveAmount = Vector3.SmoothDamp(moveAmount, moveDir * (Input.GetKey(KeyCode.LeftShift) ? sprintSpeed : walkSpeed), ref smoothMoveVelocity, smoothTime);
 	}
 
@@ -140,9 +150,12 @@ public class PlayerController : MonoBehaviourPunCallbacks, IDamageable
 
 		itemIndex = _index;
 
-		items[itemIndex].itemGameObject.SetActive(true);
+		if (items[itemIndex] != null)
+		{
+			items[itemIndex].itemGameObject.SetActive(true);
+		}
 
-		if(previousItemIndex != -1)
+		if(previousItemIndex != -1 && items[previousItemIndex] != null)
 		{
 			items[previousItemIndex].itemGameObject.SetActive(false);
 		}
@@ -186,6 +199,11 @@ public class PlayerController : MonoBehaviourPunCallbacks, IDamageable
 	[PunRPC]
 	void RPC_TakeDamage(float damage, PhotonMessageInfo info)
 	{
+		if(rollCooldown / 2 > 0)
+        {
+			return;
+        }
+
 		currentHealth -= damage;
 
 		healthbarImage.fillAmount = currentHealth / maxHealth;
